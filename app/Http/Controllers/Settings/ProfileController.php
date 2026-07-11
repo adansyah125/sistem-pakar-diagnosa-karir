@@ -19,9 +19,13 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user()->load(['education', 'experiences']);
+
         return Inertia::render('settings/profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'education' => $user->education,
+            'experiences' => $user->experiences,
         ]);
     }
 
@@ -30,7 +34,13 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $data = $request->validated();
+
+        if (isset($data['skills']) && is_string($data['skills'])) {
+            $data['skills'] = array_map('trim', explode(',', $data['skills']));
+        }
+
+        $request->user()->fill($data);
 
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
