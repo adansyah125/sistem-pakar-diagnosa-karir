@@ -9,7 +9,7 @@ import {
     ResponsiveContainer,
 } from 'recharts';
 // eslint-disable-next-line import/order
-import { BarChart3, ClipboardList, History } from 'lucide-react';
+import { BarChart3, ClipboardList, Target, Star } from 'lucide-react';
 import {
     Card,
     CardContent,
@@ -26,13 +26,15 @@ type CareerDistItem = {
 
 export default function Dashboard({
     totalDiagnosa = 0,
-    userRiwayatCount = 0,
+    uniqueCareerCount = 0,
+    bestCareer = null,
     careerDistribution = [] as CareerDistItem[],
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     maxTotal = 1,
 }: {
     totalDiagnosa: number;
-    userRiwayatCount: number;
+    uniqueCareerCount: number;
+    bestCareer: string | null;
     careerDistribution: CareerDistItem[];
     maxTotal: number;
 }) {
@@ -41,19 +43,12 @@ export default function Dashboard({
             <Head title="Dashboard" />
 
             <div className="flex flex-col gap-8 p-4">
-                {/* <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-                    <p className="mt-1 text-muted-foreground">
-                        Ringkasan data diagnosa karir IT.
-                    </p>
-                </div> */}
-
                 {/* Stat Cards */}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium">
-                                Total Data Diagnosa
+                                Total Diagnosa
                             </CardTitle>
                             <ClipboardList className="size-4 text-muted-foreground" />
                         </CardHeader>
@@ -68,20 +63,39 @@ export default function Dashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium">
-                                Riwayat Diagnosa Saya
+                                Karir Didiagnosa
                             </CardTitle>
-                            <History className="size-4 text-muted-foreground" />
+                            <Target className="size-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <p className="text-3xl font-bold">{userRiwayatCount}</p>
+                            <p className="text-3xl font-bold">{uniqueCareerCount}</p>
                             <p className="text-xs text-muted-foreground">
-                                Jumlah diagnosa yang pernah Anda lakukan
+                                Jumlah bidang karir yang pernah di diagnosa
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium">
+                                Karir Paling Cocok
+                            </CardTitle>
+                            <Star className="size-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <p className={`text-3xl font-bold ${bestCareer ? '' : 'text-muted-foreground'}`}>
+                                {bestCareer ?? '-'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {bestCareer
+                                    ? 'Bidang dengan skor tertinggi'
+                                    : 'Belum ada diagnosa'}
                             </p>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Career Distribution Chart */}
+                {/* Career Distribution Line Chart */}
                 <Card>
                     <CardHeader>
                         <div className="flex items-center gap-2">
@@ -91,13 +105,13 @@ export default function Dashboard({
                                     Minat Bidang Karir IT
                                 </CardTitle>
                                 <CardDescription>
-                                    Distribusi diagnosa berdasarkan bidang karir
+                                    Jumlah diagnosa per bidang karir
                                 </CardDescription>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        {careerDistribution.length === 0 ? (
+                        {careerDistribution.every((d) => d.total === 0) ? (
                             <p className="py-8 text-center text-sm text-muted-foreground">
                                 Belum ada data diagnosa untuk ditampilkan.
                             </p>
@@ -106,8 +120,8 @@ export default function Dashboard({
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart
                                         data={careerDistribution}
-                                        margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                                        barCategoryGap="20%"
+                                        margin={{ top: 10, right: 20, left: -10, bottom: 0 }}
+                                        barCategoryGap="25%"
                                     >
                                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                                         <XAxis

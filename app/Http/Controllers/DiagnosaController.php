@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Career;
 use App\Models\DiagnosisQuestion;
 use App\Models\DiagnosisResult;
+use App\Services\InferenceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +16,11 @@ class DiagnosaController extends Controller
     public function index(Request $request): Response
     {
         $careers = Career::orderBy('name')->get();
-        $questions = DiagnosisQuestion::with('career')->orderBy('career_id')->orderBy('order')->get()->groupBy('career_id');
+        $questions = DiagnosisQuestion::with('career')
+            ->orderBy('career_id')
+            ->orderBy('order')
+            ->get()
+            ->groupBy('career_id');
 
         $diagnosisResult = null;
         $resultId = $request->session()->get('diagnosis_result_id');
@@ -23,7 +28,6 @@ class DiagnosaController extends Controller
         if ($resultId) {
             $result = DiagnosisResult::with('career')->find($resultId);
             if ($result) {
-                $maxScore = 30;
                 $diagnosisResult = [
                     'id' => $result->id,
                     'career_name' => $result->career->name,
@@ -31,9 +35,8 @@ class DiagnosaController extends Controller
                     'skills' => $result->skills,
                     'answers' => $result->answers,
                     'total_score' => $result->total_score,
-                    'max_score' => $maxScore,
-                    'percentage' => round($maxScore > 0 ? ($result->total_score / $maxScore) * 100 : 0),
                     'conclusion' => $result->conclusion,
+                    'cf_results' => $result->cf_results,
                 ];
             }
         }
@@ -54,6 +57,20 @@ class DiagnosaController extends Controller
             'answers' => ['required', 'array', 'size:10'],
             'answers.*' => ['required', 'integer', 'min:0', 'max:3'],
         ]);
+
+        $selectedCareer = Career::findOrFail($validated['career_id']);
+
+        $questions = DiagnosisQuestion::where('career_id', $validated['career_id'])
+            ->orderBy('order')
+            ->get();
+
+        $answersByQuestion = [];
+        foreach ($questions as $index => $question) {
+            $answersByQuestion[$question->id] = $validated['answers'][$index];
+        }
+
+        $inferenceService = new InferenceService();
+        $cfResults = $inferenceService->run($answersByQuestion);
 
         $totalScore = array_sum($validated['answers']);
         $maxScore = 30;
@@ -77,6 +94,7 @@ class DiagnosaController extends Controller
             'answers' => $validated['answers'],
             'total_score' => $totalScore,
             'conclusion' => $conclusion,
+            'cf_results' => $cfResults,
         ]);
 
         $request->session()->flash('diagnosis_result_id', $result->id);

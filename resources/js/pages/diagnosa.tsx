@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight, Check, ChevronRight, ScanLine,Code2, X } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { ArrowLeft, ArrowRight, Check, ChevronRight, ScanLine, Code2, X, MapPin, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +35,23 @@ type Question = {
     order: number;
 };
 
+type CfEvidence = {
+    question_id: number;
+    score: number;
+    cf_evidence: number;
+    cf_rule: number;
+    cf_contribution: number;
+};
+
+type CfResultItem = {
+    career_id: number;
+    career_name: string;
+    cf: number;
+    percentage: number;
+    conclusion: string;
+    evidence: CfEvidence[];
+};
+
 type DiagnosisResult = {
     id: number;
     career_name: string;
@@ -42,9 +59,8 @@ type DiagnosisResult = {
     skills: string | null;
     answers: number[];
     total_score: number;
-    max_score: number;
-    percentage: number;
     conclusion: string;
+    cf_results: CfResultItem[];
 };
 
 export default function Diagnosa({
@@ -61,11 +77,11 @@ export default function Diagnosa({
 
     useEffect(() => {
         if (diagnosisResult) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setShowResult(true);
             setStep(4);
         }
     }, [diagnosisResult]);
+
     const [selectedCareer, setSelectedCareer] = useState<Career | null>(null);
     const [education, setEducation] = useState('');
     const [skills, setSkills] = useState('');
@@ -81,7 +97,6 @@ export default function Diagnosa({
         currentQuestions.every((q) => localAnswers[q.order] !== undefined);
 
     function handleSubmit() {
-        // eslint-disable-next-line curly
         if (!selectedCareer || !allAnswered) return;
 
         setSubmitting(true);
@@ -117,71 +132,75 @@ export default function Diagnosa({
     const optionLabels = ['A', 'B', 'C', 'D'];
 
     function getConclusionColor(conclusion: string): string {
-        // eslint-disable-next-line curly
         if (conclusion === 'Sangat Sesuai') return 'text-green-600';
-
-        // eslint-disable-next-line curly
         if (conclusion === 'Sesuai') return 'text-blue-600';
-
-        // eslint-disable-next-line curly
         if (conclusion === 'Cukup Sesuai') return 'text-yellow-600';
-
         return 'text-red-600';
     }
 
+    function getConclusionBg(conclusion: string): string {
+        if (conclusion === 'Sangat Sesuai') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        if (conclusion === 'Sesuai') return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        if (conclusion === 'Cukup Sesuai') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    }
+
+    function getProgressColor(cf: number): string {
+        if (cf >= 0.8) return 'bg-green-500';
+        if (cf >= 0.6) return 'bg-blue-500';
+        if (cf >= 0.4) return 'bg-yellow-500';
+        return 'bg-gray-300 dark:bg-gray-600';
+    }
+
     const isResult = !!diagnosisResult && showResult;
+    const cfResults: CfResultItem[] = diagnosisResult?.cf_results ?? [];
 
     return (
         <>
             <Head title={isResult ? 'Hasil Diagnosa Karir' : 'Diagnosa Karir'} />
 
+            {submitting && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+                    <Loader2 className="size-10 animate-spin text-primary" />
+                    <p className="mt-4 text-sm font-medium text-muted-foreground">
+                        Sedang memproses hasil diagnosa...
+                    </p>
+                    <p className="text-xs text-muted-foreground/60">
+                        Menggunakan metode Certainty Factor, tunggu sebentar
+                    </p>
+                </div>
+            )}
+
             <div className="mx-auto flex p-4 flex-col gap-8">
                 {!isResult && (
                     <>
-                        {/* <div>
-                            <h1 className="text-2xl font-semibold tracking-tight mt-3">
-                                Diagnosa Karir IT
-                            </h1>
-                            <p className="mt-1 text-muted-foreground">
-                                Ikuti langkah-langkah berikut untuk mengetahui kesesuaian karir IT
-                                Anda.
-                            </p>
-                        </div> */}
-
-                        
-
                         {/* STEP 1: Pilih Karir */}
                         {step === 1 && (
                             <div className="space-y-6">
                                 <p className="text-sm text-muted-foreground">
                                     Silakan pilih salah satu karir IT yang ingin Anda diagnosis:
                                 </p>
-                                {/* Progress */}
-                        <div className="flex items-center gap-2">
-                            {[1, 2, 3].map((s) => (
-                                <div key={s} className="flex items-center gap-2">
-                                    <div
-                                        className={`flex size-8 items-center justify-center rounded-full text-sm font-medium ${
-                                            step >= s
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-muted text-muted-foreground'
-                                        }`}
-                                    >
-                                        {step > s ? <Check className="size-4" /> : s}
-                                    </div>
-                                    <span
-                                        className={`hidden text-sm sm:inline ${
-                                            step >= s ? 'font-medium' : 'text-muted-foreground'
-                                        }`}
-                                    >
-                                        {s === 1 ? 'Pilih Karir' : s === 2 ? 'Data Diri' : 'Test Soal'}
-                                    </span>
-                                    {s < 3 && (
-                                        <ChevronRight className="size-4 text-muted-foreground" />
-                                    )}
+                                <div className="flex items-center gap-2">
+                                    {[1, 2, 3].map((s) => (
+                                        <div key={s} className="flex items-center gap-2">
+                                            <div className={`flex size-8 items-center justify-center rounded-full text-sm font-medium ${
+                                                step >= s
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}>
+                                                {step > s ? <Check className="size-4" /> : s}
+                                            </div>
+                                            <span className={`hidden text-sm sm:inline ${
+                                                step >= s ? 'font-medium' : 'text-muted-foreground'
+                                            }`}>
+                                                {s === 1 ? 'Pilih Karir' : s === 2 ? 'Data Diri' : 'Test Soal'}
+                                            </span>
+                                            {s < 3 && (
+                                                <ChevronRight className="size-4 text-muted-foreground" />
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     {careers.map((career) => (
                                         <Card
@@ -292,8 +311,8 @@ export default function Diagnosa({
                                         </CardTitle>
                                         <CardDescription>
                                             Jawab 10 soal pilihan ganda berikut dengan jujur sesuai
-                                            kemampuan Anda. Setiap jawaban akan dinilai untuk
-                                            menentukan kesesuaian karir Anda.
+                                            kemampuan Anda. Jawaban Anda akan diproses dengan metode
+                                            Certainty Factor untuk menentukan kesesuaian karir.
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-8">
@@ -323,8 +342,7 @@ export default function Diagnosa({
                                                             >
                                                                 <div
                                                                     className={`flex size-5 shrink-0 items-center justify-center rounded-full border text-xs font-medium ${
-                                                                        localAnswers[q.order] ===
-                                                                        idx
+                                                                        localAnswers[q.order] === idx
                                                                             ? 'border-primary bg-primary text-primary-foreground'
                                                                             : 'border-muted-foreground'
                                                                     }`}
@@ -356,8 +374,17 @@ export default function Diagnosa({
                                             disabled={!allAnswered || submitting}
                                             onClick={handleSubmit}
                                         >
-                                            {submitting ? 'Memproses...' : 'Lihat Hasil'}
-                                            <ScanLine className="ml-2 size-4" />
+                                            {submitting ? (
+                                                <>
+                                                    <Loader2 className="mr-2 size-4 animate-spin" />
+                                                    Memproses...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Lihat Hasil
+                                                    <ScanLine className="ml-2 size-4" />
+                                                </>
+                                            )}
                                         </Button>
                                     </div>
                                 </div>
@@ -369,15 +396,6 @@ export default function Diagnosa({
                 {/* STEP 4: HASIL DIAGNOSA */}
                 {isResult && diagnosisResult && (
                     <div className="flex flex-col gap-8 mt-3">
-                        {/* <div>
-                            <h1 className="text-2xl font-semibold tracking-tight">
-                                Hasil Diagnosa Karir
-                            </h1>
-                            <p className="mt-1 text-muted-foreground">
-                                Berikut adalah hasil lengkap diagnosis kesesuaian karir IT Anda.
-                            </p>
-                        </div> */}
-
                         {/* Ringkasan */}
                         <div className="grid gap-6 md:grid-cols-3">
                             <Card>
@@ -395,7 +413,7 @@ export default function Diagnosa({
                                             {diagnosisResult.total_score}
                                         </CardTitle>
                                         <span className="text-sm text-muted-foreground">
-                                            / {diagnosisResult.max_score}
+                                            / 30
                                         </span>
                                     </div>
                                 </CardHeader>
@@ -403,7 +421,7 @@ export default function Diagnosa({
                                     <div className="h-2 w-full rounded-full bg-muted">
                                         <div
                                             className="h-2 rounded-full bg-primary transition-all"
-                                            style={{ width: `${diagnosisResult.percentage}%` }}
+                                            style={{ width: `${(diagnosisResult.total_score / 30) * 100}%` }}
                                         />
                                     </div>
                                 </CardContent>
@@ -420,11 +438,79 @@ export default function Diagnosa({
                                 </CardHeader>
                                 <CardContent className="pt-0">
                                     <p className="text-xs text-muted-foreground">
-                                        {diagnosisResult.percentage}% tingkat kesesuaian
+                                        {Math.round((diagnosisResult.total_score / 30) * 100)}% tingkat kesesuaian
                                     </p>
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {/* Ranking CF — Semua Karir */}
+                        {cfResults.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <ScanLine className="size-5" />
+                                        Hasil Certainty Factor — Semua Karir
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Sistem mengevaluasi semua karir berdasarkan jawaban Anda
+                                        menggunakan Forward Chaining + Certainty Factor.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {cfResults.map((item) => {
+                                        const isSelected = item.career_name === diagnosisResult.career_name;
+                                        return (
+                                            <div key={item.career_id} className={`rounded-lg border p-4 transition-colors ${
+                                                isSelected ? 'border-primary bg-primary/5' : ''
+                                            }`}>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-sm">
+                                                            {item.career_name}
+                                                        </span>
+                                                        {isSelected && (
+                                                            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                                                                Dipilih
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${getConclusionBg(item.conclusion)}`}>
+                                                        {item.conclusion}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-500 ${getProgressColor(item.cf)}`}
+                                                            style={{ width: `${item.percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-sm font-medium tabular-nums w-16 text-right">
+                                                        {item.percentage}%
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground w-12 text-right">
+                                                        CF: {item.cf.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                {item.cf >= 0.8 && (
+                                                    <div className="mt-3 flex justify-end">
+                                                        <Button size="sm" variant="outline" asChild>
+                                                            <Link href={`/roadmap?career_id=${item.career_id}`}>
+                                                                <MapPin className="mr-1.5 size-3.5" />
+                                                                Lihat Roadmap
+                                                            </Link>
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Detail Jawaban */}
                         <Card>
@@ -439,8 +525,6 @@ export default function Diagnosa({
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 {(() => {
-                                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                                    const careerQuestions = questions[diagnosisResult.answers.length > 0 ? 0 : 0] ?? [];
                                     const careerId = careers.find(
                                         (c) => c.name === diagnosisResult.career_name,
                                     )?.id;
@@ -460,11 +544,8 @@ export default function Diagnosa({
 
                                     return sorted.map((q, idx) => {
                                         const selectedIdx = diagnosisResult.answers[idx];
-                                        const selectedOption =
-                                            q.options[selectedIdx] ?? null;
-                                        const isHigh = selectedOption
-                                            ? selectedOption.score >= 2
-                                            : false;
+                                        const selectedOption = q.options[selectedIdx] ?? null;
+                                        const isHigh = selectedOption ? selectedOption.score >= 2 : false;
 
                                         return (
                                             <div key={q.id}>
@@ -472,54 +553,41 @@ export default function Diagnosa({
                                                     <p className="text-sm font-medium">
                                                         {q.order}. {q.question}
                                                     </p>
-                                                    <div
-                                                        className={`flex size-8 items-center justify-center rounded-full text-xs font-bold ${
-                                                            isHigh
-                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                                                                : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                                                        }`}
-                                                    >
-                        {selectedOption?.score ?? 0}
+                                                    <div className={`flex size-8 items-center justify-center rounded-full text-xs font-bold ${
+                                                        isHigh
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                                            : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                                                    }`}>
+                                                        {selectedOption?.score ?? 0}
                                                     </div>
                                                 </div>
                                                 <div className="grid gap-1.5">
                                                     {q.options.map((opt, oi) => {
                                                         const isSelected = oi === selectedIdx;
-
                                                         return (
-                                                            <div
-                                                                key={oi}
-                                                                className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
-                                                                    isSelected
-                                                                        ? isHigh
-                                                                            ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/20'
-                                                                            : 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950/20'
-                                                                        : 'border-transparent text-muted-foreground'
-                                                                }`}
-                                                            >
-                                                                <div
-                                                                    className={`flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                                                                        isSelected
-                                                                            ? 'bg-primary text-primary-foreground'
-                                                                            : 'bg-muted'
-                                                                    }`}
-                                                                >
+                                                            <div key={oi} className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
+                                                                isSelected
+                                                                    ? isHigh
+                                                                        ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/20'
+                                                                        : 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950/20'
+                                                                    : 'border-transparent text-muted-foreground'
+                                                            }`}>
+                                                                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                                                                    isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                                                }`}>
                                                                     {optionLabels[oi]}
                                                                 </div>
-                                                                <span className="flex-1">
-                                                                    {opt.label}
-                                                                </span>
+                                                                <span className="flex-1">{opt.label}</span>
                                                                 {isSelected && (
                                                                     <span className="text-xs font-medium text-muted-foreground">
                                                                         +{opt.score} poin
                                                                     </span>
                                                                 )}
-                                                                {isSelected &&
-                                                                    (isHigh ? (
-                                                                        <Check className="size-4 shrink-0 text-green-600" />
-                                                                    ) : (
-                                                                        <X className="size-4 shrink-0 text-red-500" />
-                                                                    ))}
+                                                                {isSelected && (isHigh ? (
+                                                                    <Check className="size-4 shrink-0 text-green-600" />
+                                                                ) : (
+                                                                    <X className="size-4 shrink-0 text-red-500" />
+                                                                ))}
                                                             </div>
                                                         );
                                                     })}

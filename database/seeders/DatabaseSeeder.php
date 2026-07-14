@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             CareerSeeder::class,
             DiagnosisQuestionSeeder::class,
             RoadmapItemSeeder::class,
+            RuleSeeder::class,
         ]);
     }
 }

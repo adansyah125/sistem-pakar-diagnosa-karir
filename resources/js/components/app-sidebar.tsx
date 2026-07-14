@@ -23,7 +23,7 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Data Diagnosa',
+        title: 'Karir di Bidang IT',
         href: dataDiagnosa(),
         icon: HardDrive,
     },
@@ -47,7 +47,7 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
-        href: 'https://github.com/adansyah125',
+        href: 'https://github.com/adansyah125/sistem-pakar-diagnosa-karir',
         icon: FolderGit2,
     },
     {

@@ -15,12 +15,14 @@ class DiagnosisResult extends Model
         'answers',
         'total_score',
         'conclusion',
+        'cf_results',
     ];
 
     protected function casts(): array
     {
         return [
             'answers' => 'array',
+            'cf_results' => 'array',
         ];
     }
 
