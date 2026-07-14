@@ -60,6 +60,7 @@ class RiwayatController extends Controller
                 'conclusion' => $r->conclusion,
                 'created_at' => $r->created_at->format('d M Y, H:i'),
                 'answers_detail' => $answersDetail,
+                'cf_results' => $r->cf_results,
             ];
         });
 

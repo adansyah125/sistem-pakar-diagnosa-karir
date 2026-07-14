@@ -92,7 +92,7 @@ export default function DataDiagnosa({ careers }: { careers: Career[] }) {
 DataDiagnosa.layout = {
     breadcrumbs: [
         {
-            title: 'Data Diagnosa',
+            title: 'Pekerjaan di Bidang IT',
             href: dataDiagnosaRoute(),
         },
     ],

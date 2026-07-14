@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { CheckCircle2, Circle, MapPin, ScanLine, Lock } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { CheckCircle2, Circle, MapPin, ScanLine, ChevronRight, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -27,22 +27,31 @@ type Item = {
     completed_at: string | null;
 };
 
+type CfResult = {
+    career_id: number;
+    career_name: string;
+    cf: number;
+    percentage: number;
+    conclusion: string;
+    show_roadmap: boolean;
+};
+
 export default function Roadmap({
     careers = [],
-    diagnosedCareerIds = [] as number[],
     selectedCareerId = null,
     hasDiagnosis = false,
     items = [],
     progressCount = 0,
     totalItems = 0,
+    cfResults = [] as CfResult[],
 }: {
     careers: Career[];
-    diagnosedCareerIds: number[];
     selectedCareerId: number | null;
     hasDiagnosis: boolean;
     items: Item[];
     progressCount: number;
     totalItems: number;
+    cfResults: CfResult[];
 }) {
     function selectCareer(careerId: number) {
         router.get(
@@ -63,6 +72,29 @@ export default function Roadmap({
     const selectedCareer = careers.find((c) => c.id === selectedCareerId);
     const percentage = totalItems > 0 ? Math.round((progressCount / totalItems) * 100) : 0;
 
+    function getConclusionColor(conclusion: string): string {
+        if (conclusion === 'Sangat Sesuai') return 'text-green-600';
+        if (conclusion === 'Sesuai') return 'text-blue-600';
+        if (conclusion === 'Cukup Sesuai') return 'text-yellow-600';
+        return 'text-red-600';
+    }
+
+    function getConclusionBg(conclusion: string): string {
+        if (conclusion === 'Sangat Sesuai') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        if (conclusion === 'Sesuai') return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        if (conclusion === 'Cukup Sesuai') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    }
+
+    function getProgressColor(percentage: number): string {
+        if (percentage >= 80) return 'bg-green-500';
+        if (percentage >= 60) return 'bg-blue-500';
+        if (percentage >= 40) return 'bg-yellow-500';
+        return 'bg-gray-300 dark:bg-gray-600';
+    }
+
+    const recommendedCareers = cfResults.filter((r) => r.show_roadmap);
+
     return (
         <>
             <Head title="Roadmap Belajar" />
@@ -74,51 +106,66 @@ export default function Roadmap({
                     </p>
                 </div>
 
-                {/* Career Selector */}
-                {careers.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                        {careers.map((career) => {
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            const isDiagnosed = diagnosedCareerIds.includes(career.id);
-                            // eslint-disable-next-line @stylistic/padding-line-between-statements
-                            return (
-                                <Button
-                                    key={career.id}
-                                    variant={selectedCareerId === career.id ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => selectCareer(career.id)}
-                                >
-                                    {career.name}
-                                </Button>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Not Diagnosed Yet */}
-                {selectedCareer && !hasDiagnosis && (
+                {/* Hasil Diagnosa — Rekomendasi Karir */}
+                {cfResults.length > 0 && (
                     <Card>
-                        <CardContent className="flex flex-col items-center gap-4 py-12">
-                            <Lock className="size-12 text-muted-foreground/50" />
-                            <div className="text-center">
-                                <p className="font-medium">Belum Ada Diagnosa</p>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    Anda belum melakukan diagnosa untuk bidang <strong>{selectedCareer.name}</strong>.
-                                    Silahkan diagnosa terlebih dahulu untuk membuka roadmap belajar.
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <ScanLine className="size-4" />
+                                Hasil Diagnosa — Rekomendasi Karir
+                            </CardTitle>
+                            <CardDescription>
+                                Berdasarkan hasil diagnosis Certainty Factor, berikut karir yang
+                                cocok untuk Anda:
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {recommendedCareers.length > 0 ? (
+                                recommendedCareers.map((r) => (
+                                    <div key={r.career_id} className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                                        selectedCareerId === r.career_id ? 'border-primary bg-primary/5' : ''
+                                    }`}>
+                                        <div className="flex items-center gap-3">
+                                            <div>
+                                                <p className="text-sm font-medium">{r.career_name}</p>
+                                                <span className={`text-xs font-medium ${getConclusionColor(r.conclusion)}`}>
+                                                    {r.conclusion} ({r.percentage}%)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <Button size="sm" variant={selectedCareerId === r.career_id ? 'default' : 'outline'} onClick={() => selectCareer(r.career_id)}>
+                                            {selectedCareerId === r.career_id ? 'Sedang Dipelajari' : 'Lihat Roadmap'}
+                                            {selectedCareerId !== r.career_id && <ChevronRight className="ml-1 size-3.5" />}
+                                        </Button>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground">
+                                    Belum ada rekomendasi karir. Silakan lakukan diagnosa terlebih dahulu.
                                 </p>
-                            </div>
-                            <Button asChild>
-                                <a href={diagnosa.url({ query: { career_id: selectedCareer.id } })}>
-                                    <ScanLine className="mr-2 size-4" />
-                                    Diagnosa {selectedCareer.name}
-                                </a>
-                            </Button>
+                            )}
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Diagnosed - Show Roadmap */}
-                {selectedCareer && hasDiagnosis && items.length > 0 && (
+                {/* Career Selector */}
+                {careers.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {careers.map((career) => (
+                            <Button
+                                key={career.id}
+                                variant={selectedCareerId === career.id ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => selectCareer(career.id)}
+                            >
+                                {career.name}
+                            </Button>
+                        ))}
+                    </div>
+                )}
+
+                {/* Progress & Items — Always visible */}
+                {selectedCareer && items.length > 0 && (
                     <>
                         {/* Progress */}
                         <Card>
@@ -196,7 +243,7 @@ export default function Roadmap({
                 )}
 
                 {/* Roadmap Not Available */}
-                {selectedCareer && hasDiagnosis && items.length === 0 && (
+                {selectedCareer && items.length === 0 && (
                     <Card>
                         <CardContent className="flex flex-col items-center gap-4 py-12">
                             <MapPin className="size-12 text-muted-foreground/50" />
@@ -204,6 +251,21 @@ export default function Roadmap({
                                 <p className="font-medium">Roadmap belum tersedia</p>
                                 <p className="mt-1 text-sm text-muted-foreground">
                                     Belum ada roadmap untuk {selectedCareer.name}.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Prompt when no career selected (just in case) */}
+                {!selectedCareer && (
+                    <Card>
+                        <CardContent className="flex flex-col items-center gap-4 py-12">
+                            <BookOpen className="size-12 text-muted-foreground/50" />
+                            <div className="text-center">
+                                <p className="font-medium">Pilih Bidang Karir</p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Pilih bidang karir di atas untuk melihat roadmap pembelajaran.
                                 </p>
                             </div>
                         </CardContent>

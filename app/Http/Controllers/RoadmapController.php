@@ -15,20 +15,39 @@ class RoadmapController extends Controller
     public function index(Request $request): Response
     {
         $careers = Career::select('id', 'name', 'slug', 'icon')->get();
-        $diagnosedCareerIds = DiagnosisResult::where('user_id', $request->user()->id)
-            ->pluck('career_id')
-            ->unique()
-            ->values()
-            ->toArray();
 
         $selectedCareerId = (int) $request->input('career_id', $careers->first()?->id ?? 0);
-        $hasDiagnosis = in_array($selectedCareerId, $diagnosedCareerIds);
+
+        $recentResult = null;
+        if ($request->user()) {
+            $recentResult = DiagnosisResult::where('user_id', $request->user()->id)
+                ->where('career_id', $selectedCareerId)
+                ->latest()
+                ->first();
+        }
+
+        $cfResults = [];
+        if ($recentResult && $recentResult->cf_results) {
+            $cfResults = collect($recentResult->cf_results)
+                ->map(function ($item) {
+                    return [
+                        'career_id' => $item['career_id'],
+                        'career_name' => $item['career_name'],
+                        'cf' => $item['cf'],
+                        'percentage' => $item['percentage'],
+                        'conclusion' => $item['conclusion'],
+                        'show_roadmap' => $item['cf'] >= 0.8,
+                    ];
+                })
+                ->values()
+                ->toArray();
+        }
 
         $items = [];
         $progressCount = 0;
         $totalItems = 0;
 
-        if ($selectedCareerId > 0 && $hasDiagnosis) {
+        if ($selectedCareerId > 0) {
             $items = RoadmapItem::where('career_id', $selectedCareerId)
                 ->orderBy('order')
                 ->get()
@@ -53,12 +72,12 @@ class RoadmapController extends Controller
 
         return Inertia::render('roadmap', [
             'careers' => $careers,
-            'diagnosedCareerIds' => $diagnosedCareerIds,
             'selectedCareerId' => $selectedCareerId,
-            'hasDiagnosis' => $hasDiagnosis,
+            'hasDiagnosis' => $recentResult !== null,
             'items' => $items,
             'progressCount' => $progressCount,
             'totalItems' => $totalItems,
+            'cfResults' => $cfResults,
         ]);
     }
 

@@ -11,7 +11,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Trash2,
-    
+
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +39,14 @@ type AnswerDetail = {
     option_label: string;
 };
 
+type CfResult = {
+    career_id: number;
+    career_name: string;
+    cf: number;
+    percentage: number;
+    conclusion: string;
+};
+
 type ResultItem = {
     id: number;
     career_id: number;
@@ -51,6 +59,7 @@ type ResultItem = {
     conclusion: string;
     created_at: string;
     answers_detail: AnswerDetail[];
+    cf_results: CfResult[];
 };
 
 type Pagination = {
@@ -126,6 +135,27 @@ export default function Riwayat({
         if (score === 1) return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400';
 
         return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400';
+    }
+
+    function getCfColor(cf: number): string {
+        if (cf >= 0.8) return 'text-green-600';
+        if (cf >= 0.6) return 'text-blue-600';
+        if (cf >= 0.4) return 'text-yellow-600';
+        return 'text-red-600';
+    }
+
+    function getCfBg(conclusion: string): string {
+        if (conclusion === 'Sangat Sesuai') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        if (conclusion === 'Sesuai') return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        if (conclusion === 'Cukup Sesuai') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    }
+
+    function getCfBarColor(percentage: number): string {
+        if (percentage >= 80) return 'bg-green-500';
+        if (percentage >= 60) return 'bg-blue-500';
+        if (percentage >= 40) return 'bg-yellow-500';
+        return 'bg-gray-300 dark:bg-gray-600';
     }
 
     return (
@@ -329,6 +359,37 @@ export default function Riwayat({
                                 <p className="text-sm">
                                     <span className="text-muted-foreground">Pendidikan:</span> {detailItem.education}
                                 </p>
+                            )}
+
+                            {/* CF Results — All Careers */}
+                            {detailItem.cf_results && detailItem.cf_results.length > 0 && (
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-semibold">Hasil Certainty Factor</h4>
+                                    {detailItem.cf_results.map((cf) => (
+                                        <div key={cf.career_id} className="rounded-lg border p-3">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-sm font-medium">{cf.career_name}</span>
+                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getCfBg(cf.conclusion)}`}>
+                                                    {cf.conclusion}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-1.5 flex-1 rounded-full bg-muted">
+                                                    <div
+                                                        className={`h-full rounded-full ${getCfBarColor(cf.percentage)}`}
+                                                        style={{ width: `${cf.percentage}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs tabular-nums">
+                                                    {cf.percentage}%
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    CF: {cf.cf.toFixed(2)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
 
                             {/* Answers Breakdown */}
